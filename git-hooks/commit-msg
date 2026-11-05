@@ -1,0 +1,13 @@
+#!/bin/sh
+# Git commit-msg hook: strips Claude attribution from every commit message,
+# whoever makes the commit, so Claude never shows up as a contributor.
+# Removes "Co-Authored-By: Claude ..." / "...@anthropic.com" trailers and
+# "Generated with Claude Code" lines.
+
+msg="$1"
+tmp="$msg.tmp.$$"
+grep -viE '^[[:space:]]*co-authored-by:[[:space:]]*claude|^[[:space:]]*co-authored-by:.*@anthropic\.com|generated with \[?claude code' "$msg" > "$tmp"
+# Drop trailing blank lines left behind.
+sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' "$tmp" > "$msg"
+rm -f "$tmp"
+exit 0

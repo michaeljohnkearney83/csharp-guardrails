@@ -1,0 +1,23 @@
+#!/bin/sh
+# Git pre-commit hook: blocks commits until origin/<base> (default dev) is
+# merged into the current branch. This applies to humans too, not just Claude.
+# Override the base branch: git config hooks.baseBranch develop
+
+base="$(git config --get hooks.baseBranch)"
+[ -z "$base" ] && base="dev"
+
+git rev-parse -q --verify HEAD >/dev/null || exit 0                      # first commit
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0                  # finishing a merge
+branch="$(git rev-parse --abbrev-ref HEAD)"
+[ "$branch" = "$base" ] && exit 0
+
+git fetch origin "$base" --quiet 2>/dev/null
+git rev-parse -q --verify "refs/remotes/origin/$base" >/dev/null || exit 0
+
+if ! git merge-base --is-ancestor "origin/$base" HEAD; then
+  n="$(git rev-list --count "HEAD..origin/$base")"
+  echo "Commit blocked: '$branch' is $n commit(s) behind origin/$base." >&2
+  echo "Reverse-merge first:  git merge origin/$base" >&2
+  exit 1
+fi
+exit 0
